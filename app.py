@@ -5,12 +5,18 @@ Streamlit web application for the SPY ETF News Agent
 import streamlit as st
 from datetime import datetime
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
 from news_fetcher import NewsApiFetcher, YahooFinanceFetcher
 from sp500_data import get_sp500_price, is_valid_sp500_company, get_sp500_historical_data
+from price_prediction import (
+    prepare_time_series_data, train_linear_regression, 
+    train_random_forest, train_svr, predict_future_prices,
+    evaluate_model
+)
 
 # Streamlit page configuration
 st.set_page_config(
@@ -129,6 +135,152 @@ def display_historical_chart(period="6mo"):
     # Display the chart
     st.plotly_chart(fig, use_container_width=True)
 
+# Function to display price predictions
+def display_price_predictions(data, forecast_days=5):
+    """Display price predictions for the SPY ETF"""
+    st.header("SPY ETF Price Predictions")
+    
+    # Show information about the prediction
+    st.info(f"Predicting SPY ETF prices for the next {forecast_days} trading days based on historical data.")
+    
+    # Prepare data for prediction
+    prepared_data = prepare_time_series_data(
+        data, 
+        lookback=30,  # Use 30 days of history
+        forecast_horizon=forecast_days, 
+        test_size=0.2
+    )
+    
+    # Create columns for model selection
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.subheader("Select Prediction Model")
+        model_type = st.selectbox(
+            "Model",
+            ["Linear Regression", "Random Forest", "Support Vector Regression"],
+            index=0
+        )
+    
+    with col2:
+        st.subheader("Model Parameters")
+        lookback_days = st.slider(
+            "Days of history to use",
+            min_value=10,
+            max_value=60,
+            value=30,
+            step=5
+        )
+    
+    # Train selected model
+    if model_type == "Linear Regression":
+        model = train_linear_regression(prepared_data['X_train'], prepared_data['y_train'])
+        model_name = "Linear Regression"
+    elif model_type == "Random Forest":
+        model = train_random_forest(prepared_data['X_train'], prepared_data['y_train'])
+        model_name = "Random Forest"
+    else:
+        model = train_svr(prepared_data['X_train'], prepared_data['y_train'])
+        model_name = "SVR"
+    
+    # Evaluate model
+    eval_results = evaluate_model(model, prepared_data['X_test'], prepared_data['y_test'])
+    
+    # Make predictions
+    predicted_prices = predict_future_prices(
+        model, 
+        prepared_data['latest_sequence'], 
+        prepared_data['scaler'], 
+        forecast_horizon=forecast_days
+    )
+    
+    # Create prediction dataframe
+    last_date = data.index[-1]
+    future_dates = pd.date_range(start=last_date + pd.Timedelta(days=1), periods=forecast_days)
+    pred_df = pd.DataFrame({
+        'Date': future_dates,
+        'Predicted_Close': predicted_prices
+    })
+    pred_df.set_index('Date', inplace=True)
+    
+    # Display prediction metrics
+    st.subheader("Model Performance")
+    metrics_col1, metrics_col2, metrics_col3 = st.columns(3)
+    
+    with metrics_col1:
+        st.metric("R² Score", f"{eval_results['r2']:.4f}")
+    
+    with metrics_col2:
+        st.metric("RMSE", f"{eval_results['rmse']:.4f}")
+    
+    with metrics_col3:
+        st.metric("MAE", f"{eval_results['mae']:.4f}")
+    
+    # Create visualization
+    st.subheader(f"Price Predictions ({model_name})")
+    
+    # Create figure
+    fig = go.Figure()
+    
+    # Add actual historical prices
+    fig.add_trace(go.Scatter(
+        x=data.index[-30:],  # Show last 30 days
+        y=data['Close'][-30:],
+        mode='lines',
+        name='Historical Prices',
+        line=dict(color='blue')
+    ))
+    
+    # Add predicted prices
+    fig.add_trace(go.Scatter(
+        x=pred_df.index,
+        y=pred_df['Predicted_Close'],
+        mode='lines+markers',
+        name='Predicted Prices',
+        line=dict(color='green', dash='dash'),
+        marker=dict(size=8)
+    ))
+    
+    # Add prediction interval (simplified)
+    upper_bound = pred_df['Predicted_Close'] * (1 + eval_results['rmse'])
+    lower_bound = pred_df['Predicted_Close'] * (1 - eval_results['rmse'])
+    
+    fig.add_trace(go.Scatter(
+        x=pred_df.index,
+        y=upper_bound,
+        mode='lines',
+        line=dict(width=0),
+        showlegend=False
+    ))
+    
+    fig.add_trace(go.Scatter(
+        x=pred_df.index,
+        y=lower_bound,
+        mode='lines',
+        line=dict(width=0),
+        fill='tonexty',
+        fillcolor='rgba(0, 255, 0, 0.1)',
+        name='Prediction Interval'
+    ))
+    
+    # Update layout
+    fig.update_layout(
+        title=f"SPY ETF Price Prediction for the Next {forecast_days} Trading Days",
+        xaxis_title="Date",
+        yaxis_title="Price ($)",
+        hovermode="x unified",
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5)
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
+    
+    # Display predicted values in a table
+    st.subheader("Predicted Prices Table")
+    st.dataframe(pred_df)
+    
+    # Add disclaimer
+    st.caption("**Disclaimer**: These predictions are based on historical data and should not be used as financial advice. Past performance is not indicative of future results.")
+
 # Application title
 st.title("📈 SPY ETF News Agent")
 st.markdown("---")
@@ -181,6 +333,14 @@ with col1:
     
     # Display historical chart
     display_historical_chart(period)
+    
+    # Show price predictions if checkbox is checked
+    if st.checkbox("Show price predictions", value=False):
+        data = get_sp500_historical_data(period=period)
+        if not data.empty:
+            display_price_predictions(data, forecast_days=5)
+        else:
+            st.warning("Cannot make predictions: no historical data available")
 
 # Column 2: News
 with col2:
