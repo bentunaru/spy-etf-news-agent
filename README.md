@@ -15,6 +15,11 @@ This agent retrieves the latest news and data about the SPY ETF (which tracks th
   - Colored linear regression line (green for bullish trend, red for bearish trend)
   - Trend statistics (R², P-value, Standard Error)
   - Visual indication of trend direction and strength
+- **Machine Learning price predictions**:
+  - Multiple prediction models (Linear Regression, Random Forest, Support Vector Regression)
+  - Interactive prediction visualization with confidence intervals
+  - Model performance metrics (R², RMSE, MAE)
+  - Customizable prediction parameters
 
 ## Installation
 
@@ -69,6 +74,34 @@ Web interface features:
   - Historical data period
   - S&P 500 company filtering
   - Number of news to display
+- **Price predictions**:
+  - Enable price predictions via checkbox
+  - Select from multiple ML models
+  - View predicted prices for next 5 trading days
+  - Assess model reliability through performance metrics
+  - Visualize prediction intervals to understand uncertainty
+
+## Price Prediction Feature
+
+The price prediction functionality uses machine learning to forecast SPY ETF prices:
+
+1. **Available Models**:
+   - **Linear Regression**: Simple, interpretable model for trend-based predictions
+   - **Random Forest**: Ensemble model that can capture non-linear patterns
+   - **Support Vector Regression**: Robust model that performs well with complex data
+
+2. **How to Use**:
+   - Select a historical data period from the sidebar
+   - Check the "Show price predictions" option below the historical chart
+   - Choose your preferred prediction model
+   - Adjust parameters as needed
+   - Review the predicted prices and model performance metrics
+
+3. **Interpretation**:
+   - The prediction chart shows historical prices in blue
+   - Predicted future prices appear as a dashed green line
+   - The shaded green area represents the prediction confidence interval
+   - Wider intervals indicate higher uncertainty in the prediction
 
 ## Project Structure
 
@@ -76,6 +109,7 @@ Web interface features:
 - `news_fetcher.py`: Module for retrieving news from different sources
 - `sp500_news_agent.py`: Main console application
 - `app.py`: Streamlit web application
+- `price_prediction.py`: ML models for SPY ETF price forecasting
 - `.env`: Configuration file for API keys
 
 ## Main Dependencies
@@ -88,9 +122,11 @@ Web interface features:
 - `matplotlib`: Visualization support
 - `scipy`: Statistical analysis and regression calculation
 - `python-dotenv`: Environment variable management
+- `scikit-learn`: Machine learning models for price prediction
 
 ## Notes
 
 - If you encounter issues with News API, check that your API key is valid and that you haven't exceeded your request quota.
 - The application uses the "SPY" ticker which is the SPDR S&P 500 ETF, an efficient and reliable way to track S&P 500 performance.
 - Trend analyses are based on statistical calculations such as linear regression but do not constitute investment advice.
+- Price predictions are for educational purposes only and should not be used for actual trading decisions. Past performance is not indicative of future results.
