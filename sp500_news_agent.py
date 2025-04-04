@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-SPY ETF News Agent - Retrieves the latest news about the SPY ETF and its components
+ETF News Agent - Retrieves the latest news about ETFs (SPY and QQQ) and their components
 """
 import argparse
 import sys
@@ -8,7 +8,7 @@ from datetime import datetime
 from dotenv import load_dotenv
 
 from news_fetcher import NewsApiFetcher, YahooFinanceFetcher
-from sp500_data import get_sp500_price, is_valid_sp500_company
+from etf_data import get_etf_price, is_valid_etf_component, ETF_INFO
 
 # Load environment variables
 load_dotenv()
@@ -16,14 +16,19 @@ load_dotenv()
 def print_header():
     """Displays the application header"""
     print("\n" + "=" * 80)
-    print(" " * 30 + "SPY ETF NEWS AGENT")
+    print(" " * 30 + "ETF NEWS AGENT")
     print("=" * 80 + "\n")
 
-def print_sp500_status():
-    """Displays the current status of the SPY ETF"""
+def print_etf_status(etf_symbol="SPY"):
+    """
+    Displays the current status of the selected ETF
+    
+    Args:
+        etf_symbol (str): ETF symbol (SPY or QQQ)
+    """
     try:
-        data = get_sp500_price()
-        print(f"SPY ETF: {data['current_price']:.2f} ", end="")
+        data = get_etf_price(etf_symbol)
+        print(f"{etf_symbol} ETF ({ETF_INFO[etf_symbol]}): {data['current_price']:.2f} ", end="")
         
         if data['change'] >= 0:
             print(f"▲ +{data['change']:.2f} (+{data['change_percent']:.2f}%)")
@@ -33,7 +38,7 @@ def print_sp500_status():
         print(f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
         print("-" * 80 + "\n")
     except Exception as e:
-        print(f"Unable to retrieve SPY ETF price: {e}")
+        print(f"Unable to retrieve {etf_symbol} ETF price: {e}")
         print("-" * 80 + "\n")
 
 def print_article(article, index):
@@ -55,24 +60,28 @@ def print_article(article, index):
 
 def main():
     """Main function of the agent"""
-    parser = argparse.ArgumentParser(description="SPY ETF News Agent")
+    parser = argparse.ArgumentParser(description="ETF News Agent")
     parser.add_argument('--source', choices=['newsapi', 'yahoo', 'all'], 
                         default='all', help="Data source to use")
-    parser.add_argument('--company', type=str, help="S&P 500 company symbol (e.g: AAPL)")
+    parser.add_argument('--etf', choices=['SPY', 'QQQ'], default='SPY',
+                        help="ETF to analyze (SPY for S&P 500, QQQ for Nasdaq-100)")
+    parser.add_argument('--company', type=str, help="ETF component symbol (e.g: AAPL)")
     parser.add_argument('--limit', type=int, default=10, help="Maximum number of results")
     
     args = parser.parse_args()
     
-    # Check if the specified company is part of the S&P 500
-    if args.company and not is_valid_sp500_company(args.company):
-        print(f"Error: {args.company} is not an S&P 500 company.")
+    # Check if the specified company is part of the selected ETF
+    if args.company and not is_valid_etf_component(args.company, args.etf):
+        print(f"Error: {args.company} is not a component of the {args.etf} ETF.")
         sys.exit(1)
     
     print_header()
-    print_sp500_status()
+    print_etf_status(args.etf)
     
     # Prepare the query
-    query = args.company
+    # If a company is specified, use it as the query
+    # Otherwise, use the ETF symbol
+    query = args.company if args.company else args.etf
     
     # Initialize news collectors according to the chosen source
     news_sources = []
@@ -106,7 +115,13 @@ def main():
     
     # Display the results
     if all_articles:
-        print(f"Latest news about {args.company if args.company else 'SPY ETF'}:\n")
+        headline = f"Latest news about "
+        if args.company:
+            headline += f"{args.company} (component of {args.etf} ETF)"
+        else:
+            headline += f"{args.etf} ETF ({ETF_INFO[args.etf]})"
+        
+        print(f"{headline}:\n")
         for i, article in enumerate(all_articles, 1):
             print_article(article, i)
     else:

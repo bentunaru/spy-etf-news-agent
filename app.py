@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Streamlit web application for the SPY ETF News Agent
+Streamlit web application for the ETF News Agent (SPY & QQQ)
 """
 import streamlit as st
 from datetime import datetime
@@ -11,7 +11,10 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
 from news_fetcher import NewsApiFetcher, YahooFinanceFetcher
-from sp500_data import get_sp500_price, is_valid_sp500_company, get_sp500_historical_data
+from etf_data import (
+    get_etf_price, is_valid_etf_component, get_etf_historical_data, 
+    get_etf_components, ETF_INFO
+)
 from price_prediction import (
     prepare_time_series_data, train_linear_regression, 
     train_random_forest, train_svr, predict_future_prices,
@@ -20,7 +23,7 @@ from price_prediction import (
 
 # Streamlit page configuration
 st.set_page_config(
-    page_title="SPY ETF News Agent",
+    page_title="ETF News Agent",
     page_icon="📈",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -53,11 +56,11 @@ def get_news(query=None, limit=10):
     return all_articles[:limit]
 
 # Function to display historical chart
-def display_historical_chart(period="6mo"):
-    """Displays a chart of SPY ETF historical data"""
-    data = get_sp500_historical_data(period=period)
+def display_historical_chart(etf_symbol="SPY", period="6mo"):
+    """Displays a chart of ETF historical data"""
+    data = get_etf_historical_data(etf_symbol, period)
     if data.empty:
-        st.warning("No historical data available for SPY ETF")
+        st.warning(f"No historical data available for {etf_symbol} ETF")
         return
     
     # Calculate the linear regression line
@@ -124,7 +127,7 @@ def display_historical_chart(period="6mo"):
     
     # Customize the chart
     fig.update_layout(
-        title=f"SPY ETF Historical Data ({period})",
+        title=f"{etf_symbol} ETF Historical Data ({period})",
         xaxis_title="Date",
         yaxis_title="Price ($)",
         height=600,
@@ -136,12 +139,12 @@ def display_historical_chart(period="6mo"):
     st.plotly_chart(fig, use_container_width=True)
 
 # Function to display price predictions
-def display_price_predictions(data, forecast_days=5):
-    """Display price predictions for the SPY ETF"""
-    st.header("SPY ETF Price Predictions")
+def display_price_predictions(data, etf_symbol="SPY", forecast_days=5):
+    """Display price predictions for the selected ETF"""
+    st.header(f"{etf_symbol} ETF Price Predictions")
     
     # Show information about the prediction
-    st.info(f"Predicting SPY ETF prices for the next {forecast_days} trading days based on historical data.")
+    st.info(f"Predicting {etf_symbol} ETF prices for the next {forecast_days} trading days based on historical data.")
     
     # Prepare data for prediction
     prepared_data = prepare_time_series_data(
@@ -265,7 +268,7 @@ def display_price_predictions(data, forecast_days=5):
     
     # Update layout
     fig.update_layout(
-        title=f"SPY ETF Price Prediction for the Next {forecast_days} Trading Days",
+        title=f"{etf_symbol} ETF Price Prediction for the Next {forecast_days} Trading Days",
         xaxis_title="Date",
         yaxis_title="Price ($)",
         hovermode="x unified",
@@ -282,11 +285,20 @@ def display_price_predictions(data, forecast_days=5):
     st.caption("**Disclaimer**: These predictions are based on historical data and should not be used as financial advice. Past performance is not indicative of future results.")
 
 # Application title
-st.title("📈 SPY ETF News Agent")
+st.title("📈 ETF News Agent")
 st.markdown("---")
 
 # Sidebar for options
 st.sidebar.title("Options")
+
+# ETF selection
+etf_symbol = st.sidebar.selectbox(
+    "Select ETF",
+    list(ETF_INFO.keys()),
+    index=0,  # SPY default
+    format_func=lambda x: f"{x} - {ETF_INFO[x]}"
+)
+
 period = st.sidebar.selectbox(
     "Historical data period",
     ["1mo", "3mo", "6mo", "1y", "2y", "5y"],
@@ -294,7 +306,7 @@ period = st.sidebar.selectbox(
 )
 
 company_filter = st.sidebar.text_input(
-    "Filter by S&P 500 company (e.g.: AAPL)",
+    f"Filter by {etf_symbol} component (e.g.: AAPL)",
     key="company_filter",
 )
 
@@ -306,8 +318,8 @@ news_limit = st.sidebar.slider(
 )
 
 # Check if the specified company is valid
-if company_filter and not is_valid_sp500_company(company_filter):
-    st.sidebar.error(f"{company_filter} is not a valid S&P 500 company.")
+if company_filter and not is_valid_etf_component(company_filter, etf_symbol):
+    st.sidebar.error(f"{company_filter} is not a valid {etf_symbol} component.")
     company_filter = None
 
 # Main display in two columns
@@ -316,41 +328,41 @@ col1, col2 = st.columns([1, 1])
 # Column 1: Price and chart
 with col1:
     # Get and display current price
-    price_data = get_sp500_price()
+    price_data = get_etf_price(etf_symbol)
     
     if price_data['current_price'] > 0:
         price_delta = f"{price_data['change']:.2f} ({price_data['change_percent']:.2f}%)"
         st.metric(
-            label="SPY ETF (Current Price)",
+            label=f"{etf_symbol} ETF (Current Price)",
             value=f"${price_data['current_price']:.2f}",
             delta=price_delta
         )
     else:
-        st.error("Unable to retrieve current SPY ETF price")
+        st.error(f"Unable to retrieve current {etf_symbol} ETF price")
     
     # Display update time
     st.caption(f"Last update: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     
     # Display historical chart
-    display_historical_chart(period)
+    display_historical_chart(etf_symbol, period)
     
     # Show price predictions if checkbox is checked
     if st.checkbox("Show price predictions", value=False):
-        data = get_sp500_historical_data(period=period)
+        data = get_etf_historical_data(etf_symbol, period)
         if not data.empty:
-            display_price_predictions(data, forecast_days=5)
+            display_price_predictions(data, etf_symbol, forecast_days=5)
         else:
-            st.warning("Cannot make predictions: no historical data available")
+            st.warning(f"Cannot make predictions: no historical data available for {etf_symbol}")
 
 # Column 2: News
 with col2:
-    st.header(f"Latest news about {company_filter if company_filter else 'SPY ETF'}")
+    st.header(f"Latest news about {company_filter if company_filter else etf_symbol + ' ETF'}")
     
     # Retrieve and display news
-    articles = get_news(query=company_filter, limit=news_limit)
+    articles = get_news(query=company_filter if company_filter else etf_symbol, limit=news_limit)
     
     if not articles:
-        st.info(f"No news found for {company_filter if company_filter else 'SPY ETF'}")
+        st.info(f"No news found for {company_filter if company_filter else etf_symbol + ' ETF'}")
     
     for article in articles:
         # Convert publication date
@@ -368,4 +380,4 @@ with col2:
 
 # Footer
 st.markdown("---")
-st.caption("2025 SPY ETF News Agent - Developed with Streamlit")
+st.caption("2025 ETF News Agent - Developed with Streamlit")

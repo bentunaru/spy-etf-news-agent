@@ -1,12 +1,14 @@
-# SPY ETF News Agent
+# ETF News Agent
 
-This agent retrieves the latest news and data about the SPY ETF (which tracks the S&P 500) and its components.
+This agent retrieves the latest news and data about ETFs and their components. Currently supports:
+- **SPY ETF**: SPDR S&P 500 ETF Trust (tracks the S&P 500 Index)
+- **QQQ ETF**: Invesco QQQ Trust (tracks the Nasdaq-100 Index)
 
 ## Features
 
-- Retrieval of the latest news about the SPY ETF
-- Historical data retrieval for the SPY ETF over different time periods
-- News filtering by S&P 500 company
+- Retrieval of the latest news about the selected ETF
+- Historical data retrieval for ETFs over different time periods
+- News filtering by ETF component companies
 - Multiple data sources (News API, Yahoo Finance)
 - Formatted display of results in two interfaces:
   - Console interface: text output
@@ -45,12 +47,13 @@ python sp500_news_agent.py
 
 Optional arguments:
 - `--source`: Choose the data source ('newsapi' or 'yahoo', default: all)
-- `--company`: Filter news for a specific S&P 500 company (for example: 'AAPL')
+- `--etf`: Choose ETF to analyze ('SPY' or 'QQQ', default: 'SPY')
+- `--company`: Filter news for a specific ETF component company (for example: 'AAPL')
 - `--limit`: Limit the number of results (default: 10)
 
 Example:
 ```
-python sp500_news_agent.py --source newsapi --company AAPL --limit 5
+python sp500_news_agent.py --source newsapi --etf QQQ --company AAPL --limit 5
 ```
 
 ### Streamlit Web Interface
@@ -62,7 +65,8 @@ streamlit run app.py
 ```
 
 Web interface features:
-- Display of the current SPY ETF price with variation
+- **ETF Selection**: Choose between SPY (S&P 500) and QQQ (Nasdaq-100) ETFs
+- Display of the current ETF price with variation
 - Interactive historical data chart with:
   - Candlestick chart for prices
   - Bar chart for volume
@@ -71,8 +75,9 @@ Web interface features:
 - Trend statistics (slope, R², P-value, standard error)
 - News section with expandable articles
 - Sidebar with filtering options:
+  - ETF selection (SPY or QQQ)
   - Historical data period
-  - S&P 500 company filtering
+  - ETF component company filtering
   - Number of news to display
 - **Price predictions**:
   - Enable price predictions via checkbox
@@ -83,7 +88,7 @@ Web interface features:
 
 ## Price Prediction Feature
 
-The price prediction functionality uses machine learning to forecast SPY ETF prices:
+The price prediction functionality uses machine learning to forecast ETF prices:
 
 1. **Available Models**:
    - **Linear Regression**: Simple, interpretable model for trend-based predictions
@@ -91,6 +96,7 @@ The price prediction functionality uses machine learning to forecast SPY ETF pri
    - **Support Vector Regression**: Robust model that performs well with complex data
 
 2. **How to Use**:
+   - Select your desired ETF (SPY or QQQ) from the sidebar
    - Select a historical data period from the sidebar
    - Check the "Show price predictions" option below the historical chart
    - Choose your preferred prediction model
@@ -105,11 +111,11 @@ The price prediction functionality uses machine learning to forecast SPY ETF pri
 
 ## Project Structure
 
-- `sp500_data.py`: Module for retrieving SPY ETF data (price, company list, historical data)
+- `etf_data.py`: Module for retrieving ETF data (price, component companies, historical data)
 - `news_fetcher.py`: Module for retrieving news from different sources
 - `sp500_news_agent.py`: Main console application
 - `app.py`: Streamlit web application
-- `price_prediction.py`: ML models for SPY ETF price forecasting
+- `price_prediction.py`: ML models for ETF price forecasting
 - `.env`: Configuration file for API keys
 
 ## Main Dependencies
@@ -127,6 +133,8 @@ The price prediction functionality uses machine learning to forecast SPY ETF pri
 ## Notes
 
 - If you encounter issues with News API, check that your API key is valid and that you haven't exceeded your request quota.
-- The application uses the "SPY" ticker which is the SPDR S&P 500 ETF, an efficient and reliable way to track S&P 500 performance.
+- The application supports two ETFs:
+  - **SPY**: SPDR S&P 500 ETF Trust - tracks the performance of the S&P 500 Index
+  - **QQQ**: Invesco QQQ Trust - tracks the Nasdaq-100 Index of the largest non-financial companies
 - Trend analyses are based on statistical calculations such as linear regression but do not constitute investment advice.
 - Price predictions are for educational purposes only and should not be used for actual trading decisions. Past performance is not indicative of future results.

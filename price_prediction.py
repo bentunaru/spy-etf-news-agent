@@ -1,5 +1,5 @@
 """
-Module for price prediction models for the SPY ETF
+Module for price prediction models for ETFs (SPY and QQQ)
 """
 import numpy as np
 import pandas as pd
@@ -49,26 +49,63 @@ def prepare_time_series_data(data, lookback=30, forecast_horizon=5, test_size=0.
     }
 
 def train_linear_regression(X_train, y_train):
-    """Train a simple linear regression model"""
+    """
+    Train a simple linear regression model
+    
+    Args:
+        X_train (numpy.ndarray): Training features
+        y_train (numpy.ndarray): Training targets
+        
+    Returns:
+        LinearRegression: Trained model
+    """
     model = LinearRegression()
     # Reshape for sklearn compatibility
     model.fit(X_train, y_train)
     return model
 
 def train_random_forest(X_train, y_train):
-    """Train a random forest regression model"""
+    """
+    Train a random forest regression model
+    
+    Args:
+        X_train (numpy.ndarray): Training features
+        y_train (numpy.ndarray): Training targets
+        
+    Returns:
+        RandomForestRegressor: Trained model
+    """
     model = RandomForestRegressor(n_estimators=100, random_state=42)
     model.fit(X_train, y_train)
     return model
 
 def train_svr(X_train, y_train):
-    """Train an SVR model"""
+    """
+    Train an SVR model
+    
+    Args:
+        X_train (numpy.ndarray): Training features
+        y_train (numpy.ndarray): Training targets
+        
+    Returns:
+        SVR: Trained model
+    """
     model = SVR(kernel='rbf', C=100, gamma=0.1, epsilon=0.1)
     model.fit(X_train, y_train)
     return model
 
 def evaluate_model(model, X_test, y_test):
-    """Evaluate the model performance"""
+    """
+    Evaluate the model performance
+    
+    Args:
+        model: Trained prediction model
+        X_test (numpy.ndarray): Test features
+        y_test (numpy.ndarray): Test targets
+        
+    Returns:
+        dict: Dictionary with evaluation metrics
+    """
     predictions = model.predict(X_test)
     rmse = np.sqrt(mean_squared_error(y_test, predictions))
     mae = mean_absolute_error(y_test, predictions)

@@ -1,5 +1,5 @@
 """
-Module to retrieve the latest news about the SPY ETF (which tracks the S&P 500)
+Module to retrieve the latest news about ETFs (SPY for S&P 500 and QQQ for Nasdaq-100)
 """
 import os
 import requests
@@ -61,21 +61,26 @@ class NewsApiFetcher(NewsFetcher):
         Returns:
             list: List of formatted articles
         """
-        # Define the base query for the SPY ETF
-        base_query = "SPY ETF OR SPDR S&P 500 ETF"
-        
-        # Add the specific search term if provided
-        if query:
-            search_query = f"{base_query} AND {query}"
+        # Check if the query is one of our ETFs
+        if query == "SPY":
+            base_query = "SPY ETF OR SPDR S&P 500 ETF OR S&P 500 Index"
+        elif query == "QQQ":
+            base_query = "QQQ ETF OR Invesco QQQ Trust OR Nasdaq-100 Index"
         else:
-            search_query = base_query
+            # If it's another query (like a stock symbol) or None
+            # Default to a more generic ETF search if no specific query
+            if not query:
+                base_query = "SPY ETF OR QQQ ETF OR SPDR S&P 500 OR Invesco QQQ Trust"
+            else:
+                # For company symbols or other specific queries
+                base_query = f"{query}"
         
-        # Calculate the date one week ago to limit results
+        # Make the API request
         one_week_ago = (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d')
         
         # Make the API request
         response = self.api.get_everything(
-            q=search_query,
+            q=base_query,
             language='en',
             sort_by='publishedAt',
             from_param=one_week_ago,
@@ -117,14 +122,14 @@ class YahooFinanceFetcher(NewsFetcher):
         Retrieves news from Yahoo Finance
         
         Args:
-            query (str, optional): Company symbol (e.g.: AAPL)
+            query (str, optional): Company symbol (e.g.: AAPL, SPY, QQQ)
             limit (int, optional): Maximum number of results
             
         Returns:
             list: List of formatted articles
         """
         try:
-            # Use the SPY ticker (S&P 500 ETF) or the specific company ticker
+            # Use the provided ticker or default to SPY
             ticker_symbol = query if query else "SPY"
             
             # Retrieve data
